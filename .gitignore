@@ -6,8 +6,6 @@ backend/*.class
 
 
 backend/.env
-backend/src/main/resources/application-dev.properties
-backend/src/main/resources/application-prod.properties
 
 # ===== FRONTEND =====
 nexus-frontend/node_modules/
