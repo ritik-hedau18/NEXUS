@@ -13,6 +13,13 @@
 
 ---
 
+## 🔗 Live Deployments
+
+- **Frontend App**: [https://nexus-ritik.netlify.app](https://nexus-ritik.netlify.app)
+- **Backend API**: [https://nexus-backend-0f7v.onrender.com](https://nexus-backend-0f7v.onrender.com)
+
+---
+
 ## Architecture
 
 ![NEXUS Architecture](docs/nexus_architecture_dark.svg)
