@@ -16,7 +16,7 @@
 ## 🔗 Live Deployments
 
 - **Frontend App**: [https://nexus-ritik.netlify.app](https://nexus-ritik.netlify.app)
-- **Backend API**: [https://nexus-backend-0f7v.onrender.com](https://nexus-backend-0f7v.onrender.com)
+- **Backend API (Ping)**: [https://nexus-backend-0f7v.onrender.com/api/auth/ping](https://nexus-backend-0f7v.onrender.com/api/auth/ping) (Returns "pong" if active)
 
 ---
 
