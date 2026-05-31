@@ -26,6 +26,18 @@
 
 ---
 
+## 📸 Screenshots
+
+| Login | Dashboard |
+|:---:|:---:|
+| ![Login](docs/screenshots/login.png) | ![Dashboard](docs/screenshots/dashboard.png) |
+
+| AI Document Chat | Semantic Search |
+|:---:|:---:|
+| ![Chat](docs/screenshots/chat.png) | ![Search](docs/screenshots/search.png) |
+
+---
+
 ## What is NEXUS?
 
 **NEXUS** stands for *Neural Enterprise Knowledge Unification System*.
