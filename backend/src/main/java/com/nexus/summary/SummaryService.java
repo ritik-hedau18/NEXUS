@@ -52,7 +52,7 @@ public class SummaryService {
                 .filterExpression(filterExpression)
                 .build();
 
-        List<org.springframework.ai.document.Document> chunks = vectorStore.similaritySearch(request);
+        List<org.springframework.ai.document.Document> chunks = new ArrayList<>(vectorStore.similaritySearch(request));
 
         // 2. If vector store is empty (e.g. server restarted), re-ingest from persisted bytes
         if (chunks.isEmpty()) {
