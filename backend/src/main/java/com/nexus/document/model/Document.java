@@ -41,7 +41,6 @@ public class Document {
     @Builder.Default
     private Integer chunkCount = 0;
 
-    @Lob
     @Column(name = "file_content", columnDefinition = "BYTEA")
     @JsonIgnore
     private byte[] fileContent; // Raw file bytes for re-ingestion after restart
