@@ -2,6 +2,8 @@ package com.nexus.summary.controller;
 
 import com.nexus.summary.DocumentSummary;
 import com.nexus.summary.SummaryService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,6 +12,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/documents/{id}/summary")
 public class SummaryController {
+    private static final Logger logger = LoggerFactory.getLogger(SummaryController.class);
 
     private final SummaryService summaryService;
 
@@ -25,6 +28,7 @@ public class SummaryController {
         } catch (IllegalStateException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
+            logger.error("Unhandled exception in getSummary for document ID: {}", id, e);
             return ResponseEntity.internalServerError().body(e.getMessage());
         }
     }
