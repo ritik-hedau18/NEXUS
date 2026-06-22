@@ -38,15 +38,9 @@ CREATE TABLE IF NOT EXISTS documents (
     uploaded_at TIMESTAMP DEFAULT now()
 );
 
--- Add file_content column if it doesn't exist (for existing deployments)
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'documents' AND column_name = 'file_content'
-  ) THEN
-    ALTER TABLE documents ADD COLUMN file_content BYTEA;
-  END IF;
-END $$;
+-- Add file_content column if it doesn't exist (for existing deployments without this column)
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_content BYTEA;
+
 
 -- Chat Messages Table (for UI and metadata logging, alongside JDBC chat memory)
 CREATE TABLE IF NOT EXISTS chat_messages (
