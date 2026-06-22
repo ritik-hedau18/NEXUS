@@ -98,10 +98,30 @@ public class SummaryService {
                 """, jpaDoc.getFileName(), fullText);
 
         try {
-            return chatClient.prompt()
+            String jsonResponse = chatClient.prompt()
                     .user(userPrompt)
                     .call()
-                    .entity(DocumentSummary.class);
+                    .content();
+
+            logger.info("Raw AI response: {}", jsonResponse);
+
+            if (jsonResponse == null || jsonResponse.trim().isEmpty()) {
+                throw new IllegalStateException("AI returned an empty response");
+            }
+
+            String cleanJson = jsonResponse.trim();
+            if (cleanJson.startsWith("```")) {
+                int firstLineBreak = cleanJson.indexOf('\n');
+                if (firstLineBreak != -1) {
+                    cleanJson = cleanJson.substring(firstLineBreak).trim();
+                }
+                if (cleanJson.endsWith("```")) {
+                    cleanJson = cleanJson.substring(0, cleanJson.length() - 3).trim();
+                }
+            }
+
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(cleanJson, DocumentSummary.class);
         } catch (Exception e) {
             logger.error("Failed to generate structured summary: {}", e.getMessage(), e);
             throw new RuntimeException("AI failed to generate document summary: " + e.getMessage());
