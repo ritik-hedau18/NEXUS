@@ -33,9 +33,20 @@ CREATE TABLE IF NOT EXISTS documents (
     file_type VARCHAR(50),              -- PDF, DOCX, TXT
     status VARCHAR(30) DEFAULT 'PROCESSING',  -- PROCESSING, READY, FAILED
     chunk_count INT DEFAULT 0,
+    file_content BYTEA,                 -- Raw file bytes for re-ingestion after restart
     uploaded_by UUID REFERENCES users(id) ON DELETE SET NULL,
     uploaded_at TIMESTAMP DEFAULT now()
 );
+
+-- Add file_content column if it doesn't exist (for existing deployments)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'documents' AND column_name = 'file_content'
+  ) THEN
+    ALTER TABLE documents ADD COLUMN file_content BYTEA;
+  END IF;
+END $$;
 
 -- Chat Messages Table (for UI and metadata logging, alongside JDBC chat memory)
 CREATE TABLE IF NOT EXISTS chat_messages (

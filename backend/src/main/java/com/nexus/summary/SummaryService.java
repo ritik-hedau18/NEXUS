@@ -5,15 +5,17 @@ import com.nexus.document.repository.DocumentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.reader.tika.TikaDocumentReader;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,23 +42,30 @@ public class SummaryService {
 
         logger.info("Generating summary for document: {} (ID: {})", jpaDoc.getFileName(), docId);
 
-        // 1. Fetch document chunks from Qdrant
+        // 1. Fetch document chunks from vector store
         FilterExpressionBuilder b = new FilterExpressionBuilder();
         Filter.Expression filterExpression = b.eq("documentId", docId.toString()).build();
 
         SearchRequest request = SearchRequest.builder()
-                .query(jpaDoc.getFileName()) // Use filename as search query to fetch chunks
+                .query(jpaDoc.getFileName())
                 .topK(50)
                 .filterExpression(filterExpression)
                 .build();
 
         List<org.springframework.ai.document.Document> chunks = vectorStore.similaritySearch(request);
 
+        // 2. If vector store is empty (e.g. server restarted), re-ingest from persisted bytes
         if (chunks.isEmpty()) {
-            throw new IllegalStateException("No document chunks found in vector store for ID: " + docId);
+            logger.warn("Vector store empty for document ID: {}. Attempting re-ingestion from persisted file bytes.", docId);
+            chunks = reIngestFromDatabase(jpaDoc, docId);
         }
 
-        // 2. Sort chunks by chunkIndex to assemble original text sequence
+        if (chunks.isEmpty()) {
+            throw new IllegalStateException(
+                "No document chunks found. The document may need to be re-uploaded. Document ID: " + docId);
+        }
+
+        // 3. Sort chunks by chunkIndex to assemble original text sequence
         chunks.sort(Comparator.comparingInt(d -> {
             Object idx = d.getMetadata().get("chunkIndex");
             if (idx instanceof Number) {
@@ -65,15 +74,23 @@ public class SummaryService {
             return 0;
         }));
 
-        // 3. Concat text chunks
+        // 4. Concat text chunks
         String fullText = chunks.stream()
                 .map(org.springframework.ai.document.Document::getText)
                 .collect(Collectors.joining("\n"));
 
-        // 4. Send request to ChatClient to generate structured DocumentSummary record
+        // 5. Build prompt explicitly requesting raw JSON (compatible with Groq/Llama models)
         String userPrompt = String.format("""
                 Please analyze and summarize the following document content.
-                Ensure that your response maps exactly to the requested output structure.
+                Return ONLY a valid JSON object with no markdown, no code blocks, no explanation.
+                The JSON must have these exact fields:
+                {
+                  "title": "document title",
+                  "summary": "concise executive summary in 2-3 sentences",
+                  "keyPoints": ["key point 1", "key point 2", "key point 3", "key point 4", "key point 5"],
+                  "documentType": "type of document e.g. Guide, Report, Manual",
+                  "estimatedReadTime": "X min read"
+                }
                 
                 Document Filename: %s
                 Document Content:
@@ -88,6 +105,72 @@ public class SummaryService {
         } catch (Exception e) {
             logger.error("Failed to generate structured summary: {}", e.getMessage(), e);
             throw new RuntimeException("AI failed to generate document summary: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Re-ingests document chunks from persisted file bytes in the database.
+     * Called when the in-memory SimpleVectorStore is empty after a server restart.
+     */
+    private List<org.springframework.ai.document.Document> reIngestFromDatabase(Document jpaDoc, UUID docId) {
+        byte[] fileBytes = jpaDoc.getFileContent();
+        if (fileBytes == null || fileBytes.length == 0) {
+            logger.warn("No persisted file bytes found for document ID: {}. Cannot re-ingest.", docId);
+            return Collections.emptyList();
+        }
+
+        try {
+            logger.info("Re-ingesting document from database bytes: {} ({} bytes)", jpaDoc.getFileName(), fileBytes.length);
+
+            Resource resource = new ByteArrayResource(fileBytes) {
+                @Override
+                public String getFilename() {
+                    return jpaDoc.getFileName();
+                }
+            };
+
+            TikaDocumentReader reader = new TikaDocumentReader(resource);
+            List<org.springframework.ai.document.Document> springAiDocs = reader.read();
+
+            if (springAiDocs.isEmpty()) {
+                logger.warn("Tika returned empty content during re-ingestion for document ID: {}", docId);
+                return Collections.emptyList();
+            }
+
+            TokenTextSplitter splitter = TokenTextSplitter.builder()
+                    .withChunkSize(800)
+                    .withMinChunkSizeChars(100)
+                    .withMinChunkLengthToEmbed(5)
+                    .withMaxNumChunks(10000)
+                    .withKeepSeparator(true)
+                    .build();
+
+            List<org.springframework.ai.document.Document> rawChunks = splitter.apply(springAiDocs);
+
+            List<org.springframework.ai.document.Document> finalizedChunks = new ArrayList<>();
+            for (int i = 0; i < rawChunks.size(); i++) {
+                org.springframework.ai.document.Document rawChunk = rawChunks.get(i);
+                String chunkKey = docId.toString() + "_" + i;
+                String chunkId = UUID.nameUUIDFromBytes(chunkKey.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+
+                Map<String, Object> metadata = new HashMap<>(rawChunk.getMetadata());
+                metadata.put("workspaceId", jpaDoc.getWorkspace().getId().toString());
+                metadata.put("documentId", docId.toString());
+                metadata.put("fileName", jpaDoc.getFileName());
+                metadata.put("chunkIndex", i);
+
+                finalizedChunks.add(new org.springframework.ai.document.Document(chunkId, rawChunk.getText(), metadata));
+            }
+
+            // Write back to vector store so subsequent requests don't need re-ingestion
+            vectorStore.write(finalizedChunks);
+            logger.info("Re-ingestion complete for document ID: {}. Restored {} chunks to vector store.", docId, finalizedChunks.size());
+
+            return finalizedChunks;
+
+        } catch (Exception e) {
+            logger.error("Re-ingestion failed for document ID: {}. Error: {}", docId, e.getMessage(), e);
+            return Collections.emptyList();
         }
     }
 }

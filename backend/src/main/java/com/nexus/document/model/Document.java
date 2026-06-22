@@ -1,5 +1,6 @@
 package com.nexus.document.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.nexus.auth.model.User;
 import com.nexus.workspace.model.Workspace;
@@ -40,6 +41,11 @@ public class Document {
     @Builder.Default
     private Integer chunkCount = 0;
 
+    @Lob
+    @Column(name = "file_content", columnDefinition = "BYTEA")
+    @JsonIgnore
+    private byte[] fileContent; // Raw file bytes for re-ingestion after restart
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "authorities"})
@@ -48,3 +54,4 @@ public class Document {
     @Column(name = "uploaded_at", insertable = false, updatable = false)
     private LocalDateTime uploadedAt;
 }
+

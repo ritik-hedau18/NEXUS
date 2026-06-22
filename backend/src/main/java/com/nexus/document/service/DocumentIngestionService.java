@@ -78,13 +78,14 @@ public class DocumentIngestionService {
                 finalizedChunks.add(new Document(chunkId, rawChunk.getText(), metadata));
             }
 
-            // 5. Write chunks to Qdrant vector store
+            // 5. Write chunks to vector store
             vectorStore.write(finalizedChunks);
 
-            // 6. Update database record
+            // 6. Update database record (include file bytes for persistence across restarts)
             com.nexus.document.model.Document doc = documentRepository.findById(jpaDoc.getId()).orElse(jpaDoc);
             doc.setStatus("READY");
             doc.setChunkCount(finalizedChunks.size());
+            doc.setFileContent(fileBytes); // Persist raw bytes for re-ingestion after server restart
             documentRepository.save(doc);
 
             logger.info("Successfully ingested document: {}. Generated {} chunks.", jpaDoc.getFileName(), finalizedChunks.size());
