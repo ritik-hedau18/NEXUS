@@ -26,10 +26,10 @@ public class SummaryService {
     private final VectorStore vectorStore;
     private final ChatClient chatClient;
 
-    public SummaryService(DocumentRepository documentRepository, VectorStore vectorStore, ChatClient chatClient) {
+    public SummaryService(DocumentRepository documentRepository, VectorStore vectorStore, ChatClient.Builder chatClientBuilder) {
         this.documentRepository = documentRepository;
         this.vectorStore = vectorStore;
-        this.chatClient = chatClient;
+        this.chatClient = chatClientBuilder.build();
     }
 
     public DocumentSummary generateSummary(UUID docId) {
