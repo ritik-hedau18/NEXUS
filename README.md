@@ -250,7 +250,7 @@ Java Full Stack Developer | Spring Boot | Spring AI | React
 | Project | Description |
 |---|---|
 | [SRIJAN](https://github.com/ritik-hedau18/SRIJAN) | AI-powered Spring Boot code generator using Groq LLaMA + Spring AI |
-| [TRACE](https://github.com/ritik-hedau18/TRACE-Transaction-Risk-and-Anomaly-Classification-Engine) | Real-time fraud detection system using Spring Boot microservices + Kafka |
+| [TRACE](https://github.com/ritik-hedau18/TRACE) | Real-time fraud detection system using Spring Boot microservices + Kafka |
 
 ---
 
