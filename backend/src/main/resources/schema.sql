@@ -1,4 +1,6 @@
--- Enable UUID extension if not enabled (gen_random_uuid is built-in for PG 13+)
+-- Enable UUID generation function (required on Postgres 13+)
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -40,7 +42,6 @@ CREATE TABLE IF NOT EXISTS documents (
 
 -- Add file_content column if it doesn't exist (for existing deployments without this column)
 ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_content BYTEA;
-
 
 -- Chat Messages Table (for UI and metadata logging, alongside JDBC chat memory)
 CREATE TABLE IF NOT EXISTS chat_messages (
