@@ -7,6 +7,8 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 import javax.sql.DataSource;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 public class DatabaseConfig {
@@ -33,10 +35,10 @@ public class DatabaseConfig {
             String password = "";
 
             if (uri.getUserInfo() != null) {
-                String[] userInfo = uri.getUserInfo().split(":");
-                username = userInfo[0];
+                String[] userInfo = uri.getUserInfo().split(":", 2);
+                username = URLDecoder.decode(userInfo[0], StandardCharsets.UTF_8);
                 if (userInfo.length > 1) {
-                    password = userInfo[1];
+                    password = URLDecoder.decode(userInfo[1], StandardCharsets.UTF_8);
                 }
             }
 

@@ -1,7 +1,6 @@
--- Enable UUID generation function (required on Postgres 13+)
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 -- Users Table
+-- gen_random_uuid() is built into PostgreSQL 13+ (no pgcrypto extension required).
+-- Avoid CREATE EXTENSION here: managed Postgres (e.g. Render) often blocks it at startup.
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
