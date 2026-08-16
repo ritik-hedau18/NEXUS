@@ -59,7 +59,7 @@ public class ChatService {
     public void saveChatMessage(UUID workspaceId, User user, String sessionId, String role, String content) {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new IllegalArgumentException("Workspace not found"));
-        
+
         ChatMessage chatMessage = ChatMessage.builder()
                 .workspace(workspace)
                 .user(user)
@@ -70,25 +70,33 @@ public class ChatService {
         chatMessageRepository.save(chatMessage);
     }
 
-    public Flux<String> streamChat(UUID workspaceId, String sessionId, String message, User currentUser) {
-        // 1. Save USER message to database
-        saveChatMessage(workspaceId, currentUser, sessionId, "USER", message);
-
-        // 2. Perform raw vector search from Qdrant filtered by workspaceId
-        List<Document> similarDocs = Collections.emptyList();
+    /**
+     * Performs vector similarity search for the given query and workspace.
+     * This method is NOT transactional - vector store operations should not run inside DB transactions.
+     */
+    private List<Document> searchSimilarDocuments(UUID workspaceId, String query) {
         try {
             FilterExpressionBuilder b = new FilterExpressionBuilder();
             Filter.Expression filterExpression = b.eq("workspaceId", workspaceId.toString()).build();
-            
+
             SearchRequest searchRequest = SearchRequest.builder()
-                    .query(message)
+                    .query(query)
                     .topK(4)
                     .filterExpression(filterExpression)
                     .build();
-            similarDocs = vectorStore.similaritySearch(searchRequest);
+            return vectorStore.similaritySearch(searchRequest);
         } catch (Exception e) {
             logger.error("Error searching vector store: {}", e.getMessage());
+            return Collections.emptyList();
         }
+    }
+
+    public Flux<String> streamChat(UUID workspaceId, String sessionId, String message, User currentUser) {
+        // 1. Save USER message to database (transactional)
+        saveChatMessage(workspaceId, currentUser, sessionId, "USER", message);
+
+        // 2. Perform raw vector search from Qdrant filtered by workspaceId (NON-transactional)
+        List<Document> similarDocs = searchSimilarDocuments(workspaceId, message);
 
         // 3. Construct Context from retrieved chunks
         final String context;
@@ -115,7 +123,7 @@ public class ChatService {
                 Use ONLY the provided context from uploaded documents to answer the user's question.
                 If some parts of the question cannot be answered using the context, clearly state which parts you could not find in the workspace documents, but answer the other parts that are present in the context. If none of the question can be answered using the context, say "I couldn't find this in your workspace documents."
                 Answer directly and concisely. Do NOT mention which file or document the answer comes from — source citations are displayed separately in the UI.
-                
+
                 Context:
                 {context}
                 """;
@@ -136,7 +144,7 @@ public class ChatService {
 
         // 6. Concat source citations metadata at the end of the token stream
         Flux<String> metadataFlux = Flux.defer(() -> {
-            // Save Assistant response when stream finishes
+            // Save Assistant response when stream finishes (transactional)
             saveChatMessage(workspaceId, currentUser, sessionId, "ASSISTANT", assistantAnswer.toString());
 
             try {

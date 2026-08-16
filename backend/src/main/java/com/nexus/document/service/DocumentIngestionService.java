@@ -90,8 +90,8 @@ public class DocumentIngestionService {
 
             logger.info("Successfully ingested document: {}. Generated {} chunks.", jpaDoc.getFileName(), finalizedChunks.size());
 
-        } catch (Throwable t) {
-            logger.error("Failed to ingest document: {}. Error: {}", jpaDoc.getFileName(), t.getMessage(), t);
+        } catch (Exception e) {
+            logger.error("Failed to ingest document: {}. Error: {}", jpaDoc.getFileName(), e.getMessage(), e);
             try {
                 com.nexus.document.model.Document doc = documentRepository.findById(jpaDoc.getId()).orElse(jpaDoc);
                 doc.setStatus("FAILED");
