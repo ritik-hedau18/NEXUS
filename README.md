@@ -16,7 +16,7 @@
 ## 🔗 Live Deployments
 
 - **Frontend App**: [https://ritikbynexus.vercel.app](https://ritikbynexus.vercel.app)
-- **Backend API (Ping)**: [https://nexus-backend-0f7v.onrender.com/api/auth/ping](https://nexus-backend-0f7v.onrender.com/api/auth/ping) (Returns "pong" if active)
+- **Backend API (Ping)**: [https://nexus-backend-0f7v.onrender.com/api/auth/ping](https://nexus-backend-9skv.onrender.com/api/auth/ping) (Returns "pong" if active)
 
 ---
 
