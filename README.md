@@ -44,7 +44,7 @@
 
 NEXUS is a full-stack AI workspace platform where teams can upload documents (PDF, DOCX, TXT), chat with them using Retrieval-Augmented Generation (RAG), run semantic searches across workspace documents, and get AI-powered summaries — all within isolated, role-protected workspaces.
 
-It is built on top of **Spring AI 1.0.0**, uses **Groq's LLaMA 3.3-70b** model for generation, **Jina AI** for document embeddings, and **Qdrant** as the vector store. The frontend is a React 19 + TypeScript SPA with real-time SSE streaming for chat responses.
+It is built on top of **Spring AI 1.0.0**, uses **Groq's OpenAI GPT OSS 120B** model for generation, **Jina AI** for document embeddings, and **Qdrant** as the vector store. The frontend is a React 19 + TypeScript SPA with real-time SSE streaming for chat responses.
 
 ---
 
@@ -72,7 +72,7 @@ It is built on top of **Spring AI 1.0.0**, uses **Groq's LLaMA 3.3-70b** model f
 | Java 17 | Core language |
 | Spring Boot 3.3.5 | Backend framework |
 | Spring AI 1.0.0 | AI integration (RAG, embeddings, tools, chat memory) |
-| Groq API (LLaMA 3.3-70b) | LLM for chat generation and summarization |
+| Groq API (OpenAI GPT OSS 120B) | LLM for chat generation and summarization |
 | Jina AI (jina-embeddings-v2-base-en) | Document embedding model |
 | Qdrant Vector Store | Vector similarity search |
 | Spring Security 6 + JWT | Authentication and authorization |
@@ -117,13 +117,16 @@ git clone https://github.com/ritik-hedau18/NEXUS.git
 cd NEXUS
 ```
 
-### 2. Start infrastructure
+### 2. Start infrastructure (Optional)
 
 ```bash
 docker-compose up -d
 ```
 
 Starts PostgreSQL on `:5432` and Qdrant on `:6333` / `:6334`.
+
+> [!NOTE]
+> If Docker is not running locally, the backend automatically falls back to an in-memory `SimpleVectorStore`. However, you will still need a running PostgreSQL database (either running natively or via Docker) to connect to.
 
 ### 3. Configure environment variables
 
