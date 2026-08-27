@@ -79,6 +79,11 @@ public class SummaryService {
                 .map(org.springframework.ai.document.Document::getText)
                 .collect(Collectors.joining("\n"));
 
+        // Cap input to ~12,000 characters (~3,000 tokens) to strictly adhere to Groq TPM limits (8,000 TPM)
+        if (fullText.length() > 12000) {
+            fullText = fullText.substring(0, 12000) + "\n\n... [Remaining content omitted for executive summary]";
+        }
+
         // 5. Build prompt explicitly requesting raw JSON (compatible with Groq/Llama models)
         String userPrompt = String.format("""
                 Please analyze and summarize the following document content.
